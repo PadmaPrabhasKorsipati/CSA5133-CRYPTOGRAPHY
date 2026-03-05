@@ -1,278 +1,192 @@
-"""
-Complete DES (Data Encryption Standard) Implementation in Python
-No external libraries used — pure Python from scratch.
-Supports: Encrypt / Decrypt with PKCS#7 padding, ECB mode
-"""
+# -----------------------------
+# DES ALGORITHM IMPLEMENTATION
+# -----------------------------
 
-import base64
+# Initial Permutation Table
+IP = [58,50,42,34,26,18,10,2,
+      60,52,44,36,28,20,12,4,
+      62,54,46,38,30,22,14,6,
+      64,56,48,40,32,24,16,8,
+      57,49,41,33,25,17,9,1,
+      59,51,43,35,27,19,11,3,
+      61,53,45,37,29,21,13,5,
+      63,55,47,39,31,23,15,7]
 
-# ─────────────────────────────────────────────
-#  DES TABLES
-# ─────────────────────────────────────────────
+# Final Permutation
+FP = [40,8,48,16,56,24,64,32,
+      39,7,47,15,55,23,63,31,
+      38,6,46,14,54,22,62,30,
+      37,5,45,13,53,21,61,29,
+      36,4,44,12,52,20,60,28,
+      35,3,43,11,51,19,59,27,
+      34,2,42,10,50,18,58,26,
+      33,1,41,9,49,17,57,25]
 
-IP = [58,50,42,34,26,18,10,2, 60,52,44,36,28,20,12,4,
-      62,54,46,38,30,22,14,6, 64,56,48,40,32,24,16,8,
-      57,49,41,33,25,17, 9,1, 59,51,43,35,27,19,11,3,
-      61,53,45,37,29,21,13,5, 63,55,47,39,31,23,15,7]
+# Expansion Table
+E = [32,1,2,3,4,5,4,5,
+     6,7,8,9,8,9,10,11,
+     12,13,12,13,14,15,16,17,
+     16,17,18,19,20,21,20,21,
+     22,23,24,25,24,25,26,27,
+     28,29,28,29,30,31,32,1]
 
-IP_INV = [40,8,48,16,56,24,64,32, 39,7,47,15,55,23,63,31,
-          38,6,46,14,54,22,62,30, 37,5,45,13,53,21,61,29,
-          36,4,44,12,52,20,60,28, 35,3,43,11,51,19,59,27,
-          34,2,42,10,50,18,58,26, 33,1,41, 9,49,17,57,25]
+# Permutation Table
+P = [16,7,20,21,
+     29,12,28,17,
+     1,15,23,26,
+     5,18,31,10,
+     2,8,24,14,
+     32,27,3,9,
+     19,13,30,6,
+     22,11,4,25]
 
-E = [32, 1, 2, 3, 4, 5,  4, 5, 6, 7, 8, 9,
-      8, 9,10,11,12,13, 12,13,14,15,16,17,
-     16,17,18,19,20,21, 20,21,22,23,24,25,
-     24,25,26,27,28,29, 28,29,30,31,32, 1]
+# S-Boxes
+SBOX = [
+[[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7],
+ [0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8],
+ [4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0],
+ [15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13]],
 
-P = [16, 7,20,21,29,12,28,17,
-      1,15,23,26, 5,18,31,10,
-      2, 8,24,14,32,27, 3, 9,
-     19,13,30, 6,22,11, 4,25]
+[[15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10],
+ [3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5],
+ [0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15],
+ [13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9]],
 
-PC1 = [57,49,41,33,25,17, 9, 1,58,50,42,34,26,18,
-       10, 2,59,51,43,35,27,19,11, 3,60,52,44,36,
-       63,55,47,39,31,23,15, 7,62,54,46,38,30,22,
-       14, 6,61,53,45,37,29,21,13, 5,28,20,12, 4]
+[[10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8],
+ [13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1],
+ [13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7],
+ [1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12]],
 
-PC2 = [14,17,11,24, 1, 5, 3,28,15, 6,21,10,
-       23,19,12, 4,26, 8,16, 7,27,20,13, 2,
-       41,52,31,37,47,55,30,40,51,45,33,48,
-       44,49,39,56,34,53,46,42,50,36,29,32]
+[[7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15],
+ [13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9],
+ [10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4],
+ [3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14]],
 
-SHIFTS = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1]
+[[2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9],
+ [14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6],
+ [4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14],
+ [11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3]],
 
-S_BOXES = [
-    [[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7],
-     [0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8],
-     [4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0],
-     [15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13]],
+[[12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11],
+ [10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8],
+ [9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6],
+ [4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13]],
 
-    [[15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10],
-     [3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5],
-     [0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15],
-     [13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9]],
+[[4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1],
+ [13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6],
+ [1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2],
+ [6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12]],
 
-    [[10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8],
-     [13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1],
-     [13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7],
-     [1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12]],
-
-    [[7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15],
-     [13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9],
-     [10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4],
-     [3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14]],
-
-    [[2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9],
-     [14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6],
-     [4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14],
-     [11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3]],
-
-    [[12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11],
-     [10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8],
-     [9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6],
-     [4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13]],
-
-    [[4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1],
-     [13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6],
-     [1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2],
-     [6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12]],
-
-    [[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7],
-     [1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2],
-     [7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],
-     [2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]],
+[[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7],
+ [1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2],
+ [7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],
+ [2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]]
 ]
 
+# Permutation function
+def permute(block, table):
+    return ''.join(block[i-1] for i in table)
 
-# ─────────────────────────────────────────────
-#  BIT UTILITIES
-# ─────────────────────────────────────────────
+# XOR function
+def xor(a,b):
+    return ''.join('0' if i==j else '1' for i,j in zip(a,b))
 
-def permute(bits, table):
-    """Apply a permutation table to a bit array (1-indexed)."""
-    return [bits[i - 1] for i in table]
-
-def xor_bits(a, b):
-    return [x ^ y for x, y in zip(a, b)]
-
-def int_to_bits(n, length):
-    return [(n >> (length - 1 - i)) & 1 for i in range(length)]
-
-def bits_to_int(bits):
-    result = 0
-    for b in bits:
-        result = (result << 1) | b
-    return result
-
-def bytes_to_bits(data):
-    bits = []
-    for byte in data:
-        bits.extend(int_to_bits(byte, 8))
-    return bits
-
-def bits_to_bytes(bits):
-    return bytes(bits_to_int(bits[i:i+8]) for i in range(0, len(bits), 8))
-
-def rotate_left(lst, n):
-    return lst[n:] + lst[:n]
-
-
-# ─────────────────────────────────────────────
-#  KEY SCHEDULE  →  16 subkeys of 48 bits each
-# ─────────────────────────────────────────────
-
-def generate_subkeys(key: bytes) -> list:
-    if len(key) != 8:
-        raise ValueError("DES key must be exactly 8 bytes (64 bits).")
-    key_bits = bytes_to_bits(key)
-    permuted = permute(key_bits, PC1)          # 64 → 56 bits
-    C, D = permuted[:28], permuted[28:]
-    subkeys = []
-    for shift in SHIFTS:
-        C = rotate_left(C, shift)
-        D = rotate_left(D, shift)
-        subkeys.append(permute(C + D, PC2))    # 56 → 48 bits
-    return subkeys
-
-
-# ─────────────────────────────────────────────
-#  FEISTEL F-FUNCTION
-# ─────────────────────────────────────────────
-
-def f_function(R: list, subkey: list) -> list:
-    expanded = permute(R, E)                   # 32 → 48 bits (E-expansion)
-    xored = xor_bits(expanded, subkey)         # XOR with 48-bit subkey
-
-    s_output = []
+# S-box substitution
+def sbox_substitution(bits):
+    output = ""
     for i in range(8):
-        block = xored[i*6 : i*6 + 6]
-        row = (block[0] << 1) | block[5]       # outer bits → row
-        col = bits_to_int(block[1:5])          # inner 4 bits → col
-        s_output.extend(int_to_bits(S_BOXES[i][row][col], 4))  # 6 → 4 bits
+        block = bits[i*6:(i+1)*6]
+        row = int(block[0] + block[5],2)
+        col = int(block[1:5],2)
+        val = SBOX[i][row][col]
+        output += format(val,'04b')
+    return output
 
-    return permute(s_output, P)                # P permutation → 32 bits
+# DES round function
+def f_function(right,key):
 
+    expanded = permute(right,E)
 
-# ─────────────────────────────────────────────
-#  CORE DES BLOCK CIPHER  (single 8-byte block)
-# ─────────────────────────────────────────────
+    xored = xor(expanded,key)
 
-def des_block(block: bytes, subkeys: list) -> bytes:
-    """Encipher/decipher one 8-byte block. Decryption = reversed subkeys."""
-    bits = bytes_to_bits(block)
-    bits = permute(bits, IP)                   # Initial permutation
+    sbox_out = sbox_substitution(xored)
 
-    L, R = bits[:32], bits[32:]
+    return permute(sbox_out,P)
 
-    for subkey in subkeys:                     # 16 rounds
-        L, R = R, xor_bits(L, f_function(R, subkey))
+# DES encrypt
+def des_encrypt(text,key):
 
-    combined = permute(R + L, IP_INV)         # Final permutation (note R+L swap)
-    return bits_to_bytes(combined)
+    text = permute(text,IP)
 
+    left = text[:32]
+    right = text[32:]
 
-# ─────────────────────────────────────────────
-#  PKCS#7 PADDING
-# ─────────────────────────────────────────────
+    for i in range(16):
 
-def pkcs7_pad(data: bytes) -> bytes:
-    pad = 8 - (len(data) % 8)
-    return data + bytes([pad] * pad)
+        temp = right
 
-def pkcs7_unpad(data: bytes) -> bytes:
-    pad = data[-1]
-    if pad < 1 or pad > 8:
-        raise ValueError("Invalid PKCS#7 padding.")
-    if data[-pad:] != bytes([pad] * pad):
-        raise ValueError("Padding mismatch — wrong key or corrupted data.")
-    return data[:-pad]
+        right = xor(left,f_function(right,key))
+
+        left = temp
+
+    combined = right + left
+
+    cipher = permute(combined,FP)
+
+    return cipher
 
 
-# ─────────────────────────────────────────────
-#  DES ECB  — public API
-# ─────────────────────────────────────────────
+# DES decrypt
+def des_decrypt(cipher,key):
 
-def des_encrypt(plaintext: bytes, key: bytes) -> bytes:
-    """Encrypt plaintext bytes with DES (ECB mode, PKCS#7 padding)."""
-    subkeys = generate_subkeys(key)
-    padded = pkcs7_pad(plaintext)
-    ciphertext = b""
-    for i in range(0, len(padded), 8):
-        ciphertext += des_block(padded[i:i+8], subkeys)
-    return ciphertext
+    cipher = permute(cipher,IP)
 
-def des_decrypt(ciphertext: bytes, key: bytes) -> bytes:
-    """Decrypt ciphertext bytes with DES (ECB mode, PKCS#7 unpadding)."""
-    if len(ciphertext) % 8 != 0:
-        raise ValueError("Ciphertext length must be a multiple of 8 bytes.")
-    subkeys = generate_subkeys(key)[::-1]      # Reverse subkeys for decryption
-    plaintext = b""
-    for i in range(0, len(ciphertext), 8):
-        plaintext += des_block(ciphertext[i:i+8], subkeys)
-    return pkcs7_unpad(plaintext)
+    left = cipher[:32]
+    right = cipher[32:]
 
+    for i in range(16):
 
-# ─────────────────────────────────────────────
-#  INTERACTIVE CLI
-# ─────────────────────────────────────────────
+        temp = right
 
-def get_key() -> bytes:
-    while True:
-        key = input("Enter 8-character key: ")
-        if len(key) == 8:
-            return key.encode("latin-1")
-        print("  ✗ Key must be exactly 8 characters.\n")
+        right = xor(left,f_function(right,key))
 
-def main():
-    print("=" * 50)
-    print("     DES CIPHER  —  Pure Python Implementation")
-    print("=" * 50)
-    print(" [1] Encrypt")
-    print(" [2] Decrypt")
-    print("=" * 50)
+        left = temp
 
-    choice = input("Choose (1/2): ").strip()
+    combined = right + left
 
-    if choice == "1":
-        # ── ENCRYPT ──────────────────────────────────
-        plaintext = input("Enter plaintext: ").encode("utf-8")
-        key = get_key()
+    text = permute(combined,FP)
 
-        ciphertext = des_encrypt(plaintext, key)
-
-        print("\n─── RESULT ───────────────────────────────────")
-        print(f"  HEX    : {ciphertext.hex().upper()}")
-        print(f"  Base64 : {base64.b64encode(ciphertext).decode()}")
-        print("──────────────────────────────────────────────")
-
-    elif choice == "2":
-        # ── DECRYPT ──────────────────────────────────
-        print("Input format:  [1] HEX   [2] Base64")
-        fmt = input("Choose (1/2): ").strip()
-        raw = input("Enter ciphertext: ").strip()
-
-        if fmt == "1":
-            ciphertext = bytes.fromhex(raw.replace(" ", ""))
-        elif fmt == "2":
-            ciphertext = base64.b64decode(raw)
-        else:
-            print("Invalid format choice.")
-            return
-
-        key = get_key()
-
-        try:
-            plaintext = des_decrypt(ciphertext, key)
-            print("\n─── RESULT ───────────────────────────────────")
-            print(f"  Plaintext : {plaintext.decode('utf-8')}")
-            print("──────────────────────────────────────────────")
-        except Exception as e:
-            print(f"\n  ✗ Decryption failed: {e}")
-
-    else:
-        print("Invalid choice.")
+    return text
 
 
-if __name__ == "__main__":
-    main()
+# -----------------------------
+# USER INTERFACE
+# -----------------------------
+
+print("DES Algorithm")
+print("1. Encrypt")
+print("2. Decrypt")
+
+choice = int(input("Enter choice: "))
+
+if choice == 1:
+
+    plaintext = input("Enter 64-bit binary plaintext: ")
+    key = input("Enter 48-bit binary key: ")
+
+    cipher = des_encrypt(plaintext,key)
+
+    print("Cipher Text:",cipher)
+
+elif choice == 2:
+
+    cipher = input("Enter 64-bit binary cipher: ")
+    key = input("Enter 48-bit binary key: ")
+
+    text = des_decrypt(cipher,key)
+
+    print("Decrypted Text:",text)
+
+else:
+
+    print("Invalid Choice")
