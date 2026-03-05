@@ -1,4 +1,52 @@
-# Triple DES Implementation
+# -------------------------
+# SIMPLE DES FUNCTIONS
+# -------------------------
+
+def xor(a,b):
+    result=""
+    for i in range(len(a)):
+        if a[i]==b[i]:
+            result+="0"
+        else:
+            result+="1"
+    return result
+
+
+def des_encrypt(text,key):
+
+    left = text[:32]
+    right = text[32:]
+
+    for i in range(16):
+
+        temp = right
+
+        right = xor(left,key[:32])
+
+        left = temp
+
+    return right + left
+
+
+def des_decrypt(text,key):
+
+    left = text[:32]
+    right = text[32:]
+
+    for i in range(16):
+
+        temp = right
+
+        right = xor(left,key[:32])
+
+        left = temp
+
+    return right + left
+
+
+# -------------------------
+# TRIPLE DES
+# -------------------------
 
 def triple_des_encrypt(plaintext, k1, k2, k3):
 
@@ -21,6 +69,10 @@ def triple_des_decrypt(cipher, k1, k2, k3):
 
     return plaintext
 
+
+# -------------------------
+# USER INTERFACE
+# -------------------------
 
 print("TRIPLE DES")
 print("1. Encrypt")
@@ -52,3 +104,7 @@ elif choice == 2:
     plaintext = triple_des_decrypt(cipher, k1, k2, k3)
 
     print("Decrypted Text:", plaintext)
+
+else:
+
+    print("Invalid Choice")
