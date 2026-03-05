@@ -26,9 +26,11 @@ def decrypt(cipher, d, n):
     return power(cipher, d, n)
 
 
-# Main Program
-
 print("RSA Algorithm")
+print("1. Encrypt")
+print("2. Decrypt")
+
+choice = input("Enter choice: ")
 
 p = int(input("Enter prime number p: "))
 q = int(input("Enter prime number q: "))
@@ -39,23 +41,27 @@ phi = (p - 1) * (q - 1)
 print("n =", n)
 print("phi =", phi)
 
-# user gives public key
 e = int(input("Enter public key e: "))
 
-# check validity
 if gcd(e, phi) != 1:
-    print("Invalid public key. Choose another e.")
+    print("Invalid public key")
 else:
 
-    # find private key
     d = mod_inverse(e, phi)
 
     print("Private key d =", d)
 
-    msg = int(input("Enter message: "))
+    if choice == "1":
 
-    cipher = encrypt(msg, e, n)
-    print("Encrypted message =", cipher)
+        msg = int(input("Enter message: "))
+        cipher = encrypt(msg, e, n)
+        print("Encrypted message =", cipher)
 
-    plain = decrypt(cipher, d, n)
-    print("Decrypted message =", plain)
+    elif choice == "2":
+
+        cipher = int(input("Enter cipher: "))
+        plain = decrypt(cipher, d, n)
+        print("Decrypted message =", plain)
+
+    else:
+        print("Invalid choice")
