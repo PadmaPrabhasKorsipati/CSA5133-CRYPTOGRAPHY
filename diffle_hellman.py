@@ -1,3 +1,4 @@
+
 def power(a, b, p):
     result = 1
     for i in range(b):
