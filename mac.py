@@ -13,8 +13,8 @@ def generate_mac(message, key):
 
 
 print("Message Authentication Code (MAC)")
-print("1. Generate MAC")
-print("2. Verify MAC")
+print("1. Encrypt")
+print("2. Decrypt")
 
 choice = int(input("Enter choice: "))
 
@@ -41,6 +41,7 @@ elif choice == 2:
         print("MAC verified successfully")
     else:
         print("MAC verification failed")
+
 
 else:
     print("Invalid choice")
