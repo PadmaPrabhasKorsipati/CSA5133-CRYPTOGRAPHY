@@ -1,14 +1,22 @@
-import hashlib
+def simple_hash(text):
+
+    h = 0
+
+    for ch in text:
+        h = (h + ord(ch)) % 256
+
+    return h
+
 
 def generate_hmac(message, key):
 
-    h = hashlib.sha256()
+    inner = key + message
+    inner_hash = simple_hash(inner)
 
-    data = key + message
+    outer = key + str(inner_hash)
+    hmac = simple_hash(outer)
 
-    h.update(data.encode())
-
-    return h.hexdigest()
+    return hmac
 
 
 print("HMAC Algorithm")
@@ -32,7 +40,7 @@ elif choice == 2:
 
     message = input("Enter message: ")
     key = input("Enter secret key: ")
-    received_mac = input("Enter received HMAC: ")
+    received_mac = int(input("Enter received HMAC: "))
 
     mac = generate_hmac(message, key)
 
