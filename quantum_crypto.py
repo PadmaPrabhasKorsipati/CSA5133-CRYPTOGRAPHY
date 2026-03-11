@@ -1,22 +1,20 @@
-def pseudo_random(n, seed):
+def generate_bits(n):
 
-    result = []
+    bits = []
 
     for i in range(n):
-        seed = (seed * 7 + 3) % 10
-        result.append(seed % 2)
+        bits.append(i % 2)
 
-    return result
+    return bits
 
 
-def pseudo_bases(n, seed):
+def generate_bases(n):
 
     bases = []
 
     for i in range(n):
-        seed = (seed * 5 + 1) % 10
 
-        if seed % 2 == 0:
+        if i % 2 == 0:
             bases.append('+')
         else:
             bases.append('x')
@@ -50,25 +48,43 @@ def sift_key(bits, sender_bases, receiver_bases):
     return key
 
 
-print("Quantum Cryptography (BB84 Simulation)")
+print("Quantum Cryptography (BB84)")
+print("1. Generate Key")
+print("2. Verify Key")
 
-n = int(input("Enter number of bits: "))
-
-alice_bits = pseudo_random(n, 5)
-alice_bases = pseudo_bases(n, 7)
-
-print("Alice Bits:", alice_bits)
-print("Alice Bases:", alice_bases)
+choice = int(input("Enter choice: "))
 
 
-bob_bases = pseudo_bases(n, 9)
+if choice == 1:
 
-bob_results = measure(alice_bits, alice_bases, bob_bases)
+    n = int(input("Enter number of bits: "))
 
-print("Bob Bases:", bob_bases)
-print("Bob Measurements:", bob_results)
+    alice_bits = generate_bits(n)
+    alice_bases = generate_bases(n)
+
+    print("Alice Bits:", alice_bits)
+    print("Alice Bases:", alice_bases)
+
+    bob_bases = generate_bases(n)
+
+    bob_results = measure(alice_bits, alice_bases, bob_bases)
+
+    print("Bob Bases:", bob_bases)
+    print("Bob Measurements:", bob_results)
+
+    shared_key = sift_key(alice_bits, alice_bases, bob_bases)
+
+    print("Generated Secret Key:", shared_key)
 
 
-shared_key = sift_key(alice_bits, alice_bases, bob_bases)
+elif choice == 2:
 
-print("Shared Secret Key:", shared_key)
+    key = input("Enter key to verify: ")
+
+    if len(key) > 0:
+        print("Key verified successfully")
+    else:
+        print("Invalid key")
+
+else:
+    print("Invalid choice")
