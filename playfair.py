@@ -106,8 +106,8 @@ def encryptByPlayfairCipher(string, key):
     generateKeyTable(key, keyT)
     return encrypt(string, keyT)
 
-key = "Monarchy"
-string = "instruments"
+key = "network"
+string = "baloon"
 print("Key text:", key)
 print("Plain text:", string)
 string = encryptByPlayfairCipher(string, key)
